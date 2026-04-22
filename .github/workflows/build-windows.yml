@@ -1,0 +1,83 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    paths:
+      - 'primary_education_app.py'
+      - 'requirements.txt'
+      - '.github/workflows/*.yml'
+  pull_request:
+    branches: [ "main", "master" ]
+    paths:
+      - 'primary_education_app.py'
+      - 'requirements.txt'
+      - '.github/workflows/*.yml'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        if (Test-Path requirements.txt) {
+          pip install -r requirements.txt
+        } else {
+          pip install pillow
+        }
+        
+    - name: Verify source file
+      run: |
+        if (-not (Test-Path primary_education_app.py)) {
+          Write-Error "primary_education_app.py not found!"
+          exit 1
+        }
+        Write-Host "Source file found, size: $((Get-Item primary_education_app.py).Length) bytes"
+        
+    - name: Build EXE with PyInstaller
+      run: |
+        pyinstaller `
+          --name "小学出题器" `
+          --onefile `
+          --windowed `
+          --icon=NONE `
+          --add-data "primary_education_app.py;." `
+          --hidden-import=pillow `
+          --clean `
+          --noconfirm `
+          primary_education_app.py
+          
+    - name: List dist directory
+      run: |
+        Get-ChildItem -Path dist -Recurse | ForEach-Object { Write-Host $_.FullName }
+        
+    - name: Upload Windows EXE artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: primary-education-app-windows
+        path: dist/小学出题器.exe
+        retention-days: 30
+        if-no-files-found: error
+
+    - name: Create Release (on tags only)
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/小学出题器.exe
+        draft: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
