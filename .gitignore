@@ -1,0 +1,18 @@
+```
+# Generated papers (likely temporary/output files)
+generated_papers/
+
+# Python compiled files
+*.pyc
+__pycache__/
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+
+# Environment files
+.env
+.env.local
+*.env.*
+```
